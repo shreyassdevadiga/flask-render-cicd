@@ -1,15 +1,16 @@
-name: CI → Render Deploy
+name: CI → Render Deploy (tests then deploy)
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  test-and-deploy:
-    runs-on: windows-latest
-
+  build-test-and-deploy:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -22,11 +23,13 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
-        run: pytest -q
+        run: |
+          pytest -q
 
       - name: Trigger Render Deploy
-        if: success()
+        if: ${{ success() }}
         env:
           HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          curl -X POST -fsS "%HOOK_URL%"
+          # Use POST to trigger the deploy hook. Render accepts GET or POST.
+          curl -X POST -fsS "$HOOK_URL"
